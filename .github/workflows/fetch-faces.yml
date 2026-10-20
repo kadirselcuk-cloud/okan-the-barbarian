@@ -1,0 +1,23 @@
+name: Fetch face photos
+
+on:
+  workflow_dispatch:
+  push:
+    paths: [scripts/fetch_faces.py]
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/fetch_faces.py
+      - name: Commit photos
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add faces/src
+          git diff --cached --quiet || git commit -m "Fetch Wikipedia face photos"
+          git push
