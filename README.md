@@ -9,7 +9,8 @@ Head coaches **sacked** by Fenerbahçe, Beşiktaş and Trabzonspor while Okan Bu
 `index.html` is an animated cartoon (about 70 seconds) with its own video player. Okan the Barbarian, a Galatasaray bobblehead in a horned helmet, strolls along the touchline and collects the bobbleheads of every coach below in his net bag. Sacked coaches' heads pop off on springs, resigned coaches hand theirs over, and Kartal takes his back.
 
 - Open `index.html` in a browser, or see the GitHub Pages site once it's enabled (Settings → Pages → Source: **GitHub Actions**).
-- The faces are the lead photos of each person's Wikipedia article, loaded when the page opens. If a photo can't be loaded, a cartoon face is used. To use your own photos, put them at `faces/<id>.jpg` (ids are listed in `PEOPLE` in `index.html`).
+- Faces: `faces/<id>.jpg` are face crops of each person's Wikipedia lead photo. The originals and their Commons licenses are in `faces/src/` (fetched by the *Fetch face photos* workflow). Re-crop with `python3 scripts/crop_faces.py "$(cat scripts/face_tweaks.json)"`.
+- Helmets: Galatasaray horns, Beşiktaş eagle wings, Fenerbahçe canary with blonde braids, Trabzonspor hamsi (anchovy).
 - Controls: play/pause, restart, seek bar with a dot per coach, speed, mute, fullscreen. Keys: Space, ←/→, M, F.
 
 ## Timeline

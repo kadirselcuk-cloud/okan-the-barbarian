@@ -158,7 +158,7 @@
 
   <section>
     <h2>Photo credits</h2>
-    <p class="note">The faces are the lead photos of each person's Wikipedia article (from Wikimedia Commons, under their own licenses), loaded live when the page opens. When a photo can't be loaded, a cartoon face is used instead. To use your own photos, put them in <code>faces/&lt;id&gt;.jpg</code>.</p>
+    <p class="note">The faces are cropped from the lead photo of each person's Wikipedia article, hosted on Wikimedia Commons under the licenses listed below.</p>
     <ul class="credits" id="credits"></ul>
   </section>
 </main>
@@ -257,7 +257,7 @@
   }
   async function loadFace(id) {
     const p = PEOPLE[id];
-    try { p.img = await loadImage(`faces/${id}.jpg`); p.credit = { local: true }; return; } catch (e) { /* fall through */ }
+    try { p.img = await loadImage(`faces/${id}.jpg`); p.local = true; return; } catch (e) { /* fall through */ }
     for (const lang of ['en', 'tr']) {
       try {
         const r = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(p.wiki)}`);
@@ -272,13 +272,21 @@
       } catch (e) { /* try next */ }
     }
   }
+  let photoCredits = {};
   function renderCredits() {
     const ul = document.getElementById('credits');
     ul.innerHTML = '';
     for (const id of Object.keys(PEOPLE)) {
       const p = PEOPLE[id];
       const li = document.createElement('li');
-      if (p.credit && p.credit.local) li.textContent = `${p.name}: local photo`;
+      const c = photoCredits[id];
+      if (p.local && c) {
+        const a = document.createElement('a');
+        a.href = c.fileUrl; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = c.file.replace(/_/g, ' ');
+        const artist = new DOMParser().parseFromString(c.artist || '', 'text/html').body.textContent.trim();
+        li.append(`${p.name}: `, a, ` by ${artist || 'unknown'}, ${c.license || 'see file page'}, cropped`);
+      } else if (p.local) li.textContent = `${p.name}: local photo`;
       else if (p.credit) {
         li.append(`${p.name}: `);
         const a = document.createElement('a');
@@ -325,7 +333,7 @@
     ctx.save();
     ctx.beginPath(); ctx.ellipse(0, 0, r, r * 1.04, 0, 0, Math.PI * 2); ctx.clip();
     if (p.img) {
-      const [sx, sy, sw, sh] = faceCrop(p.img);
+      const [sx, sy, sw, sh] = p.local ? [0, 0, p.img.naturalWidth, p.img.naturalHeight] : faceCrop(p.img);
       ctx.fillStyle = '#ddd'; ctx.fillRect(-r, -r * 1.04, r * 2, r * 2.08);
       ctx.drawImage(p.img, sx, sy, sw, sh, -r, -r * 1.04, r * 2, r * 2.08);
     } else {
@@ -339,7 +347,7 @@
     ctx.lineWidth = Math.max(2, r * 0.07);
     ctx.strokeStyle = '#1a0f0a';
     ctx.beginPath(); ctx.ellipse(0, 0, r, r * 1.04, 0, 0, Math.PI * 2); ctx.stroke();
-    if (opts.helmet) drawHelmet(r);
+    if (opts.helmet) HELMETS[opts.helmet](r);
     if (opts.sweat) drawSweat(r, opts.sweat);
     ctx.restore();
   }
@@ -370,27 +378,122 @@
     ctx.fillText(p.name.split(' ').map(s => s[0]).join(''), 0, r * 0.85);
   }
 
-  function drawHelmet(r) {
-    // Barbarian horned helmet
-    ctx.fillStyle = '#f2ead8'; ctx.strokeStyle = '#1a0f0a'; ctx.lineWidth = r * 0.06;
-    for (const s of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(s * r * 0.62, -r * 0.82);
-      ctx.quadraticCurveTo(s * r * 1.45, -r * 1.0, s * r * 1.25, -r * 1.75);
-      ctx.quadraticCurveTo(s * r * 1.1, -r * 1.2, s * r * 0.4, -r * 1.0);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    }
-    const g = ctx.createLinearGradient(0, -r * 1.3, 0, -r * 0.6);
-    g.addColorStop(0, '#d9d9e0'); g.addColorStop(1, '#7d7f8a');
+  // Helmet base shared by every club: a dome over the hair plus a rivetted brim band.
+  const CAP_Y = -0.62;  // brim height, in head radii (the head's top edge is at -1.04)
+  function helmetCap(r, top, bottom, band, rivet) {
+    ctx.strokeStyle = '#1a0f0a'; ctx.lineWidth = Math.max(1, r * 0.06); ctx.lineJoin = 'round';
+    const g = ctx.createLinearGradient(0, -r * 1.25, 0, r * CAP_Y);
+    g.addColorStop(0, top); g.addColorStop(1, bottom);
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.ellipse(0, -r * 0.72, r * 0.86, r * 0.5, 0, Math.PI, 0);
+    ctx.ellipse(0, r * CAP_Y, r * 0.98, r * 0.6, 0, Math.PI, 0);
     ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#FDB912';
-    rr(-r * 0.9, -r * 0.8, r * 1.8, r * 0.18, r * 0.06); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#A90432';
-    for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.arc(k * r * 0.34, -r * 0.71, r * 0.045, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    ctx.beginPath(); ctx.ellipse(-r * 0.35, r * (CAP_Y - 0.35), r * 0.28, r * 0.1, -0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = band;
+    rr(-r * 1.04, r * (CAP_Y - 0.1), r * 2.08, r * 0.2, r * 0.07); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = rivet;
+    for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.arc(k * r * 0.4, r * CAP_Y, r * 0.05, 0, Math.PI * 2); ctx.fill(); }
   }
+
+  // Galatasaray: barbarian horns
+  function helmetViking(r) {
+    ctx.fillStyle = '#f2ead8'; ctx.strokeStyle = '#1a0f0a'; ctx.lineWidth = Math.max(1, r * 0.06);
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(s * r * 0.7, r * (CAP_Y - 0.12));
+      ctx.quadraticCurveTo(s * r * 1.55, r * (CAP_Y - 0.25), s * r * 1.35, r * (CAP_Y - 1.05));
+      ctx.quadraticCurveTo(s * r * 1.2, r * (CAP_Y - 0.45), s * r * 0.45, r * (CAP_Y - 0.3));
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    helmetCap(r, '#e3e3ea', '#7d7f8a', '#FDB912', '#A90432');
+  }
+
+  // Beşiktaş: black eagle wings
+  function helmetWings(r) {
+    ctx.strokeStyle = '#1a0f0a'; ctx.lineWidth = Math.max(1, r * 0.05);
+    for (const s of [-1, 1]) {
+      for (let k = 3; k >= 0; k--) {
+        ctx.save();
+        ctx.translate(s * r * (0.92 + 0.16 * k), r * (CAP_Y - 0.2 - 0.24 * k));
+        ctx.rotate(s * (-0.35 - 0.22 * k));
+        ctx.fillStyle = k % 2 ? '#f4f4f4' : '#dcdcdc';
+        ctx.beginPath(); ctx.ellipse(s * r * 0.18, 0, r * (0.5 - 0.05 * k), r * 0.13, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    helmetCap(r, '#4a4a4a', '#0d0d0d', '#f4f4f4', '#151515');
+    // stripes on the dome
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(0, r * CAP_Y, r * 0.98, r * 0.6, 0, Math.PI, 0); ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.fillRect(-r * 0.09, -r * 1.4, r * 0.18, r);
+    ctx.restore();
+  }
+
+  // Fenerbahçe: canary on top, blonde braids hanging by the sides
+  function helmetCanary(r) {
+    ctx.strokeStyle = '#7a5a12'; ctx.lineWidth = Math.max(1, r * 0.04);
+    for (const s of [-1, 1]) {
+      for (let k = 0; k < 6; k++) {
+        const bx = s * r * (0.98 + 0.02 * k), by = r * (CAP_Y + 0.15 + k * 0.24);
+        ctx.fillStyle = k % 2 ? '#f6d46a' : '#e9bf45';
+        ctx.beginPath(); ctx.ellipse(bx, by, r * 0.15, r * 0.14, (k % 2 ? 0.6 : -0.6), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
+      const ty = r * (CAP_Y + 0.15 + 6 * 0.24);
+      ctx.fillStyle = '#0B1F5C'; rr(s * r * 1.1 - r * 0.1, ty - r * 0.12, r * 0.2, r * 0.1, r * 0.03); ctx.fill();
+      ctx.fillStyle = '#f6d46a';
+      ctx.beginPath(); ctx.moveTo(s * r * 1.1 - r * 0.1, ty - r * 0.02); ctx.lineTo(s * r * 1.1 + r * 0.12, ty - r * 0.02); ctx.lineTo(s * r * 1.12, ty + r * 0.2); ctx.lineTo(s * r * 1.05, ty + r * 0.12); ctx.lineTo(s * r * 1.0, ty + r * 0.2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    helmetCap(r, '#2a4aa8', '#0B1F5C', '#FFE100', '#0B1F5C');
+    // the canary
+    const by = r * (CAP_Y - 0.72);
+    ctx.strokeStyle = '#1a0f0a'; ctx.lineWidth = Math.max(1, r * 0.05);
+    ctx.fillStyle = '#e8b800';
+    ctx.beginPath(); ctx.moveTo(-r * 0.3, by); ctx.lineTo(-r * 0.62, by - r * 0.12); ctx.lineTo(-r * 0.58, by + r * 0.1); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#FFE100';
+    ctx.beginPath(); ctx.ellipse(0, by, r * 0.36, r * 0.24, -0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(r * 0.3, by - r * 0.24, r * 0.17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e8b800';
+    ctx.beginPath(); ctx.ellipse(-r * 0.05, by + r * 0.02, r * 0.2, r * 0.11, 0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ff8a1f';
+    ctx.beginPath(); ctx.moveTo(r * 0.45, by - r * 0.28); ctx.lineTo(r * 0.62, by - r * 0.22); ctx.lineTo(r * 0.45, by - r * 0.17); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#1a0f0a';
+    ctx.beginPath(); ctx.arc(r * 0.34, by - r * 0.28, r * 0.04, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Trabzonspor: a hamsi (anchovy) lying across the head
+  function helmetFish(r) {
+    helmetCap(r, '#9fd2f2', '#3f7fae', '#7B1E30', '#6CB4E8');
+    const fy = r * (CAP_Y - 0.5);
+    ctx.strokeStyle = '#1a0f0a'; ctx.lineWidth = Math.max(1, r * 0.05);
+    // tail
+    ctx.fillStyle = '#7B1E30';
+    ctx.beginPath(); ctx.moveTo(-r * 0.85, fy); ctx.lineTo(-r * 1.45, fy - r * 0.38); ctx.lineTo(-r * 1.3, fy); ctx.lineTo(-r * 1.45, fy + r * 0.38); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // dorsal fin
+    ctx.beginPath(); ctx.moveTo(-r * 0.35, fy - r * 0.3); ctx.quadraticCurveTo(-r * 0.05, fy - r * 0.7, r * 0.25, fy - r * 0.32); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // body
+    const g = ctx.createLinearGradient(0, fy - r * 0.35, 0, fy + r * 0.35);
+    g.addColorStop(0, '#5d9fcf'); g.addColorStop(0.5, '#cfeaf8'); g.addColorStop(1, '#8cc4e6');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(0, fy, r * 1.0, r * 0.36, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(0, fy, r * 1.0, r * 0.36, 0, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = 'rgba(123,30,48,.85)'; ctx.fillRect(-r, fy - r * 0.04, r * 2, r * 0.1);
+    ctx.strokeStyle = 'rgba(30,60,90,.45)'; ctx.lineWidth = Math.max(1, r * 0.03);
+    for (let k = -3; k <= 1; k++) for (const dy of [-0.16, 0.16]) { ctx.beginPath(); ctx.arc(k * r * 0.22, fy + dy * r, r * 0.1, -Math.PI / 2, Math.PI / 2); ctx.stroke(); }
+    ctx.restore();
+    ctx.strokeStyle = '#1a0f0a'; ctx.lineWidth = Math.max(1, r * 0.05);
+    // gill, eye, mouth
+    ctx.beginPath(); ctx.arc(r * 0.5, fy, r * 0.26, -1.1, 1.1); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(r * 0.72, fy - r * 0.08, r * 0.11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#1a0f0a'; ctx.beginPath(); ctx.arc(r * 0.74, fy - r * 0.07, r * 0.05, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(r * 0.98, fy + r * 0.04); ctx.lineTo(r * 0.86, fy + r * 0.1); ctx.stroke();
+  }
+
+  const HELMETS = { viking: helmetViking, wings: helmetWings, canary: helmetCanary, fish: helmetFish };
+  const CLUB_HELMET = { GS: 'viking', BJK: 'wings', FB: 'canary', TS: 'fish' };
 
   function drawSweat(r, level) {
     ctx.fillStyle = 'rgba(120,190,255,.9)';
@@ -810,18 +913,18 @@
       const hx = x + jx, hy = GROUND + HEAD_DY * s;
       if (!headless) {
         const rot = Math.sin(t * 6 + i) * 0.05 + Math.sin(t * 38) * 0.06 * nervous;
-        drawHead(e.who, hx, hy - headLift, HEAD_R, rot, { sweat: nervous });
+        drawHead(e.who, hx, hy - headLift, HEAD_R, rot, { sweat: nervous, helmet: CLUB_HELMET[e.club] });
       }
       // name plate while approaching
       if (u > -3.2 && u < 0.4) {
         const a = clamp((u + 3.2) / 0.4, 0, 1) * clamp((0.4 - u) / 0.3, 0, 1);
-        namePlate(x, hy - HEAD_R - headLift - 6, e, a);
+        namePlate(x, hy - HEAD_R * 1.75 - headLift, e, a);
       }
       // quip
-      if (u > -1.5 && lu < -0.05) bubble(hx - 30, hy - HEAD_R - headLift - 66, e.quip, { tail: 10 });
+      if (u > -1.5 && lu < -0.05) bubble(hx - 30, hy - HEAD_R * 1.75 - headLift - 60, e.quip, { tail: 10 });
       if (e.type === 'W') {
         const back = launchT(i) + FLIGHT + KARTAL_BACK;
-        if (t > back - 0.1 && t < back + 1.6) bubble(hx + 30, hy - HEAD_R - 8, '…actually, I\'m staying.', { tail: -10 });
+        if (t > back - 0.1 && t < back + 1.6) bubble(hx - 40, hy - HEAD_R * 1.7, '…actually, I\'m staying.', { tail: 10 });
       }
 
       // flying head bookkeeping
@@ -878,7 +981,7 @@
     const bob = inOutro ? Math.sin(t * 4) * 3 : Math.abs(Math.sin(ph)) * -6;
     const okRot = (inOutro ? Math.sin(t * 3) * 0.08 : Math.sin(ph * 0.5) * 0.07) + jiggle;
     const ohx = OKAN_SX + Math.sin(ph * 0.5) * 2, ohy = GROUND + HEAD_DY * OKAN_S + bob;
-    drawHead('okan', ohx, ohy, HEAD_R * 1.12, okRot, { helmet: true });
+    drawHead('okan', ohx, ohy, HEAD_R * 1.12, okRot, { helmet: 'viking' });
 
     // whistling notes
     const busy = ENC.some((e, i) => Math.abs(t - contactT(i)) < 1.3);
@@ -903,7 +1006,7 @@
       const x = lerp(from.x, to.x, k);
       const y = lerp(from.y, to.y, k) - Math.sin(k * Math.PI) * 190;
       const r = f.reverse ? lerp(17, HEAD_R, k) : lerp(HEAD_R, 17, k);
-      drawHead(e.who, x, y, r, k * Math.PI * 2 * (f.reverse ? -1 : 1.5));
+      drawHead(e.who, x, y, r, k * Math.PI * 2 * (f.reverse ? -1 : 1.5), { helmet: CLUB_HELMET[e.club] });
     }
 
     // Okan's lines
@@ -965,7 +1068,7 @@
       const since = t - (launchT(i) + FLIGHT);
       const squash = since < 0.3 ? Math.sin(since / 0.3 * Math.PI) * 0.25 : 0;
       ctx.save(); ctx.translate(hx, hy); ctx.scale(1 + squash, 1 - squash);
-      drawHead(ENC[i].who, 0, 0, 17, Math.sin(n * 1.7) * 0.5);
+      drawHead(ENC[i].who, 0, 0, 17, Math.sin(n * 1.7) * 0.5, { helmet: CLUB_HELMET[ENC[i].club] });
       ctx.restore();
     });
     ctx.restore();
@@ -1001,7 +1104,7 @@
       if (t >= launchT(i) + FLIGHT) {
         const since = t - (launchT(i) + FLIGHT);
         const pop = since < 0.3 ? 1 + Math.sin(since / 0.3 * Math.PI) * 0.4 : 1;
-        drawHead(ENC[i].who, x, y, 16 * pop, 0);
+        drawHead(ENC[i].who, x, y + 4, 13 * pop, 0, { helmet: CLUB_HELMET[ENC[i].club] });
       } else {
         ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
         ctx.beginPath(); ctx.arc(x, y, 15, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
@@ -1276,6 +1379,7 @@
   t = 1.6;
   renderCredits();
   (document.fonts ? document.fonts.load(`40px Bangers`) : Promise.resolve()).catch(() => {}).finally(() => {});
+  fetch('faces/src/credits.json').then(r => r.ok ? r.json() : {}).catch(() => ({})).then(c => { photoCredits = c; renderCredits(); });
   Promise.all(Object.keys(PEOPLE).map(id => loadFace(id).catch(() => {}))).then(renderCredits);
   last = performance.now();
   requestAnimationFrame(frame);
