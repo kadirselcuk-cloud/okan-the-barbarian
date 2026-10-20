@@ -4,6 +4,27 @@ Head coaches **sacked** by Fenerbahçe, Beşiktaş and Trabzonspor while Okan Bu
 
 "Sacked" here means the club ended the coach's tenure, including the "mutual termination" (*karşılıklı fesih*) that Turkish clubs usually announce. Resignations, expired contracts and interim spells are listed separately below.
 
+## Timeline
+
+| Date | Team | Coach | Sacked / Resigned |
+|------|------|-------|-------------------|
+| Oct 2022 | Beşiktaş | Valérien Ismaël | Sacked |
+| Mar 2023 | Trabzonspor | Abdullah Avcı | Resigned |
+| Oct 2023 | Trabzonspor | Nenad Bjelica | Sacked |
+| Oct 2023 | Beşiktaş | Şenol Güneş | Resigned |
+| Nov 2023 | Beşiktaş | Burak Yılmaz (interim) | Resigned |
+| 22 Dec 2023 | Beşiktaş | Rıza Çalımbay | Sacked |
+| 14 Apr 2024 | Beşiktaş | Fernando Santos | Sacked |
+| 31 Aug 2024 | Trabzonspor | Abdullah Avcı | Sacked |
+| 30 Nov 2024 | Beşiktaş | Giovanni van Bronckhorst | Sacked |
+| Mar 2025 | Trabzonspor | Şenol Güneş | Sacked |
+| 28 Aug 2025 | Beşiktaş | Ole Gunnar Solskjær | Sacked |
+| 29 Aug 2025 | Fenerbahçe | José Mourinho | Sacked |
+| Apr 2026 | Fenerbahçe | Domenico Tedesco | Sacked |
+| 18 May 2026 | Beşiktaş | Sergen Yalçın | Sacked |
+| 1–2 Sep 2026 | Trabzonspor | Fatih Tekke | Resigned (club accepted) |
+| 10 Sep 2026 | Fenerbahçe | İsmail Kartal | Resigned (withdrawn, still in charge) |
+
 ## Sacked: 12 in total
 
 ### Fenerbahçe: 2
