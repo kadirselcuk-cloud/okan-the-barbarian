@@ -1086,7 +1086,7 @@
 
   // ---------- Audio ----------
   const audio = {
-    ctx: null, master: null, music: null, muted: false, step: 0, next: 0,
+    ctx: null, master: null, music: null, muted: false, beat: 0, next: 0,
     init() {
       if (this.ctx) return;
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -1137,13 +1137,13 @@
       if (this.next < this.ctx.currentTime) this.next = this.ctx.currentTime + 0.05;
       while (this.next < this.ctx.currentTime + 0.15) {
         const when = this.next - this.ctx.currentTime;
-        const s = this.step;
+        const s = this.beat;
         const mf = n => 440 * Math.pow(2, (n - 69) / 12);
         if (s % 2 === 0) this.tone(mf(this.bass[(s / 2) % 16] - 12 + 12), spb * 1.6, 'triangle', 0.5, null, when, this.music);
         const ln = this.lead[s % 32];
         if (ln) this.tone(mf(ln), spb * 0.9, 'square', 0.18, null, when, this.music);
         if (s % 4 === 2) this.noise(0.04, 0.06, 6000);
-        this.step++; this.next += spb;
+        this.beat++; this.next += spb;
       }
     },
   };
@@ -1171,6 +1171,7 @@
 
   function setPlaying(p) {
     playing = p;
+    if (p) started = true;
     if (p) { audio.init(); if (audio.ctx && audio.ctx.state === 'suspended') audio.ctx.resume(); if (t >= TOTAL) t = 0; }
     playIcon.setAttribute('d', p ? ICON_PAUSE : ICON_PLAY);
     playBtn.setAttribute('aria-label', p ? 'Pause' : 'Play');
@@ -1223,7 +1224,8 @@
     if (ev.key === 'ArrowLeft') { seek(t - 5); ev.preventDefault(); }
   });
 
-  bigPlay.addEventListener('click', () => setPlaying(true));
+  let started = false;
+  bigPlay.addEventListener('click', () => { if (!started) seek(0); setPlaying(true); });
   canvas.addEventListener('click', () => setPlaying(!playing));
   playBtn.addEventListener('click', () => setPlaying(!playing));
   el('restartBtn').addEventListener('click', () => { seek(0); setPlaying(true); });
